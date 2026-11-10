@@ -1,0 +1,13 @@
+-- Active: 1793141005463@@127.0.0.1@3306@sistema_login
+CREATE DATABASE IF NOT EXISTS sistema_login;
+
+USE sistema_login;
+
+
+CREATE TABLE usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
