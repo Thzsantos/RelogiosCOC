@@ -1,68 +1,102 @@
+
 const bcrypt = require('bcryptjs');
 const db = require('../config/database');
 const generateToken = require('../utils/generateToken');
 
-// Cadastrar
+// CADASTRAR
 exports.cadastrar = async (req, res) => {
+    try {
+        const { nome, email, senha } = req.body;
 
-    const { nome, email, senha } = req.body;
+        if (!nome || !email || !senha) {
+            return res.status(400).json({
+                msg: "Preencha todos os campos"
+            });
+        }
 
-    if (!nome || !email || !senha) return res.status(400).json({ msg: "preencha todos os campos" });
+        const [existe] = await db.query(
+            'SELECT id FROM usuarios WHERE email = ?',
+            [email]
+        );
 
-    // Verificar se email já existe
-    const [existe] = await db.query('SELECT id FROM usuarios WHERE email = ?', [email]);
+        if (existe.length > 0) {
+            return res.status(409).json({
+                msg: "Email já cadastrado"
+            });
+        }
 
-    if (existe.length > 0) return res.status(409).json({ msg: "email já cadastrado" });
+        const senhaHash = await bcrypt.hash(senha, 10);
 
-    // Criptografar senha
-    const senhaHash = await bcrypt.hash(senha, 10);
+        await db.query(
+            'INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)',
+            [nome, email, senhaHash]
+        );
 
-    // Salvar no banco
-    await db.query('INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)', [nome, email, senhaHash]);
+        return res.status(201).json({
+            msg: "Usuário cadastrado com sucesso"
+        });
 
-    console.log("Usuário cadastrado!");
+    } catch (erro) {
+        console.error(erro);
 
-    return res.status(201).json({ msg: "usuário cadastrado com sucesso" });
-
+        return res.status(500).json({
+            msg: "Erro interno do servidor"
+        });
+    }
 };
-
-
 
 // LOGIN
 exports.login = async (req, res) => {
+    try {
+        const { email, senha } = req.body;
 
-    const { email, senha } = req.body;
-
-    // Verificar campos
-    if (!email || !senha) return res.status(400).json({ msg: "preencha todos os campos😊😊🤣🤣😊😊" });
-
-    const [rows] = await db.query('SELECT * FROM usuarios WHERE email = ?', [email]);
-    const usuario = rows[0];
-
-    if (!usuario) return res.status(401).json({ msg: "NÃO TEM ISSO AQUI ZÉ😊😊🤣🤣😊😊" });
-
-
-
-    // compare a senha
-    const senhaOK = await bcrypt.compare(senha, usuario.senha)
-
-  if (!senhaOK ) 
-    return res.status(401).json({ msg: "Senha incorreta" });
-      console.log(senhaOK);
-};
-
-// Dados vindos do front-end (exemplo)
-this.login(
-    {
-        body: {
-            nome: "yago",
-            email: "ys@gmail.com",
-            senha: "senha123"
+        if (!email || !senha) {
+            return res.status(400).json({
+                msg: "Por favor insira o email ou senha."
+            });
         }
-    },
-    {
-        status: codigo => ({
-            json: dados => console.log(codigo, dados)
-        })
+
+        const [rows] = await db.query(
+            'SELECT * FROM usuarios WHERE email = ?',
+            [email]
+        );
+
+        const usuarios = rows[0];
+
+        if (!usuarios) {
+            return res.status(401).json({
+                msg: "Email ou senha incorreta"
+            });
+        }
+
+        const senhaOK = await bcrypt.compare(
+            senha,
+            usuarios.senha
+        );
+
+        if (!senhaOK) {
+            return res.status(401).json({
+                msg: "Email ou senha incorreta"
+            });
+        }
+
+        const token = generateToken(usuarios.id);
+
+        return res.status(200).json({
+            msg: "Login realizado com sucesso",
+            token,
+            usuario: {
+                id: usuarios.id,
+                nome: usuarios.nome,
+                email: usuarios.email
+            }
+        });
+
+    } catch (erro) {
+        console.error("Erro no login:", erro);
+
+        return res.status(500).json({
+            msg: "Erro interno do servidor"
+        });
     }
-);
+};

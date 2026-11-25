@@ -1,17 +1,20 @@
-import conectarBanco, { dbConfig } from "./database/connection.js";
- 
-async function iniciarAplicacao() {
-  const { host, port } = dbConfig;
-  console.log(`Configuração do banco: ${host}:${port}`);
- 
-  try {
-    const status = await conectarBanco();
-    console.log(status);
-    console.log("Aplicação pronta.");
-  } catch (error) {
-    console.error("Erro ao iniciar a aplicação:", error);
-    process.exitCode = 1;
-  }
-}
- 
-iniciarAplicacao();
+const express = require('express');
+const cors = require('cors');
+const app = express();
+const authRoutes = require('./routes/authRoutes');
+
+app.use(cors());
+app.use(express.json());
+app.use(authRoutes);
+
+
+app.get('/', (req, res) => res.json({ msg: "Backend rodando na rota principal" }));
+
+const authMiddleware = require('./middlewares/authMiddleware')
+
+app.get('/api/perfil', authMiddleware, (req, res) => res.json({ msg: " vc esta logado" }));
+
+module.exports = app;
+
+
+
